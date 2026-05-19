@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>My App</title>
+
+  <link rel="manifest" href="manifest.json">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#000000">
+
+</head>
+``
+<style>
+body {
+  background: black;
+  color: white;
+  font-family: Arial, system-ui, sans-serif;
+  margin: 0;
+  padding: 20px;
+}
+
+.app {
+  max-width: 420px;
+  margin: auto;
+}
+
+.controls {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+button {
+  background: #111;
+  border: 1px solid #333;
+  color: white;
+  padding: 6px 14px;
+  border-radius: 999px;
+  margin: 0 6px;
+}
+
+.card {
+  background: #111;
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.exercise {
+  margin: 6px 0;
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+  <h1>Training</h1>
+
+  <div class="controls">
+    <button onclick="prevWeek()">◀</button>
+    <span id="week">Week 1</span>
+    <button onclick="nextWeek()">▶</button>
+  </div>
+
+  <div class="card" id="workout"></div>
+</div>
+
+<script>
+var week = 1;
+
+// Load saved data
+var log = JSON.parse(localStorage.getItem("training-log") || "{}");
+
+// === WORKOUTS ===
+var workouts = {
+  A: [
+    { name: "Barbell Bench Press", link: "https://www.youtube.com/watch?v=gRVjAtPip0Y" },
+    { name: "Incline DB Press", link: "https://www.youtube.com/watch?v=8iPEnn-ltC8" },
+    { name: "Cable Chest Fly", link: "https://www.youtube.com/watch?v=eozdVDA78K0" },
+    { name: "Tricep Pushdown", link: "https://www.youtube.com/watch?v=2-LAMcpzODU" },
+    { name: "Overhead Tricep Extension", link: "https://www.youtube.com/watch?v=_gsUck-7M74" },
+    { name: "Skull Crushers", link: "https://www.youtube.com/watch?v=d_KZxkY_0cM" },
+    { name: "Hip Thrust", link: "https://www.youtube.com/watch?v=LM8XHLYJoYs" }
+  ],
+  B: [
+    { name: "Lat Pulldown", link: "https://www.youtube.com/watch?v=CAwf7n6Luuc" },
+    { name: "Seated Row", link: "https://www.youtube.com/watch?v=HJSVR_67OlM" },
+    { name: "DB Row", link: "https://www.youtube.com/watch?v=pYcpY20QaE8" },
+    { name: "Barbell Curl", link: "https://www.youtube.com/watch?v=kwG2ipFRgfo" },
+    { name: "Hammer Curl", link: "https://www.youtube.com/watch?v=zC3nLlEvin4" },
+    { name: "Cable Curl", link: "https://www.youtube.com/watch?v=NFzTWp2qpiE" },
+    { name: "Romanian Deadlift", link: "https://www.youtube.com/watch?v=2SHsk9AzdjA" }
+  ],
+  C: [
+    { name: "DB Shoulder Press", link: "https://www.youtube.com/watch?v=qEwKCR5JCog" },
+    { name: "Lateral Raise", link: "https://www.youtube.com/watch?v=kDqklk1ZESo" },
+    { name: "Rear Delt Fly", link: "https://www.youtube.com/watch?v=EA7u4Q_8HQ0" },
+    { name: "Hip Thrust", link: "https://www.youtube.com/watch?v=LM8XHLYJoYs" },
+    { name: "Bulgarian Split Squat", link: "https://www.youtube.com/watch?v=2C-uNgKwPLE" },
+    { name: "Cable Kickback", link: "https://www.youtube.com/watch?v=1uDiW5--rAE" }
+  ]
+};
+
+// === SAVE FUNCTION ===
+function save() {
+  localStorage.setItem("training-log", JSON.stringify(log));
+}
+
+// === FIND LAST WEIGHT ===
+function getLastWeight(exercise, key) {
+  var order = ["A","B","C"];
+  for (var w = week - 1; w >= 1; w--) {
+    var prevKey = order[(w - 1) % 3];
+    if (prevKey === key &&
+        log[w] &&
+        log[w][exercise] &&
+        log[w][exercise].weight) {
+      return Number(log[w][exercise].weight);
+    }
+  }
+  return null;
+}
+
+// === RENDER ===
+function render() {
+  document.getElementById("week").textContent = "Week " + week;
+
+  var order = ["A","B","C"];
+  var key = order[(week - 1) % 3];
+  var list = workouts[key];
+
+  var box = document.getElementById("workout");
+  box.textContent = "";
+
+  log[week] = log[week] || {};
+
+  // Title
+  var title = document.createElement("div");
+  title.textContent = "Workout " + key;
+  box.appendChild(title);
+
+  // Exercises
+  list.forEach(function(item) {
+
+    var row = document.createElement("div");
+
+    var name = document.createElement("span");
+    name.textContent = item.name;
+
+    var btn = document.createElement("a");
+    btn.textContent = " ℹ️";
+    btn.href = item.link;
+    btn.target = "_blank";
+    btn.style.color = "#0a84ff";
+    btn.style.textDecoration = "none";
+
+    var input = document.createElement("input");
+    input.type = "number";
+    input.placeholder = "kg";
+    input.style.marginLeft = "10px";
+    input.value = log[week][item.name]?.weight || "";
+
+    input.oninput = function() {
+      log[week][item.name] = log[week][item.name] || {};
+      log[week][item.name].weight = input.value;
+      save();
+      render();
+    };
+
+    row.appendChild(name);
+    row.appendChild(btn);
+    row.appendChild(input);
+
+    // Suggestion
+    var last = getLastWeight(item.name, key);
+    if (last) {
+      var hint = document.createElement("div");
+      hint.style.fontSize = "11px";
+      hint.style.color = "#888";
+      hint.textContent = "Next time: " + (last + 2.5) + " kg";
+      row.appendChild(hint);
+    }
+
+    box.appendChild(row);
+  });
+
+  // === KETTLEBELL FINISHER ===
+  var finisher = document.createElement("div");
+  finisher.style.marginTop = "20px";
+  finisher.style.paddingTop = "10px";
+  finisher.style.borderTop = "1px solid #333";
+
+  var fTitle = document.createElement("strong");
+  fTitle.textContent = "5–10 Min Kettlebell Finisher";
+  finisher.appendChild(fTitle);
+
+  var list = document.createElement("div");
+  list.style.fontSize = "13px";
+  list.style.color = "#aaa";
+  list.innerHTML =
+    "• Kettlebell Swings<br>" +
+    "• Goblet Squats<br>" +
+    "• Reverse Lunges<br><br>" +
+    "Alternate for 5–10 minutes";
+
+  finisher.appendChild(list);
+  box.appendChild(finisher);
+}
+
+// === NAVIGATION ===
+function nextWeek() {
+  if (week < 12) week++;
+  render();
+}
+
+function prevWeek() {
+  if (week > 1) week--;
+  render();
+}
+
+render();
+</script>
+</body>
+</html>
